@@ -12,8 +12,10 @@ How do Americans vote?  Millions of dollars are spent on campaign funding meant 
 Consider the 2008 presidential election between Barack Obama (democrat) and John McCain (Republican) and the 2012 presidential between Barack Obama (democrat, incumbent) and Mitt Romney (Republican).  Obama, the democratic candidate, won the election in both cases, democratic voters voted for him and republican candidates voted for his opponent.
 
 ```{r, echo=F}
+
 install.packages("foreign")
 library(foreign)
+library(tidyverse)
 
 data2012=read.dta("../data/anes_timeseries_2012_Stata12.dta")
 
