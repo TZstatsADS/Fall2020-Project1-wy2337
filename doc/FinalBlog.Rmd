@@ -1,0 +1,458 @@
+---
+title: "How Do Americans Vote?"
+author: "Wen Yin"
+date: "9/23/2020"
+output: html_document
+---
+
+How do Americans vote?  Millions of dollars are spent on campaign funding meant to make the answer to that question "My candidate".  But it turns out, the answer is really "Exactly the same way they've always voted".  In other words, if someone voted for a democratic candidate in a previous election, we can confidently predict that they will also vote for a democratic candidate in current and future elections.  It is only the drastic minority of individuals who will cross the proverbial line and vote for candidates in different parties.
+
+# A Case Study: The 2008 and 2012 Presidential Elections
+
+Consider the 2008 presidential election between Barack Obama (democrat) and John McCain (Republican) and the 2012 presidential between Barack Obama (democrat, incumbent) and Mitt Romney (Republican).  Obama, the democratic candidate, won the election in both cases, democratic voters voted for him and republican candidates voted for his opponent.
+
+```{r, echo=F}
+library(foreign)
+
+data2012=read.dta("data/anes_timeseries_2012_dta/anes_timeseries_2012_Stata12.dta")
+
+realvals=as.character(data2012$postvote_presvtwho)
+realvals[realvals=="1. [preload: dem_pcname]"]="dem"
+realvals[realvals=="2. [preload: rep_pcname"]="rep"
+realvals[!(realvals %in% c("dem", "rep"))]=NA
+
+subdat=data.frame(presvote=realvals,
+                  gender_respondent_x=data2012$gender_respondent_x,
+                  interest_attention=data2012$interest_attention,
+                  interest_wherevote=data2012$interest_wherevote,
+                  interest_voted2008=data2012$interest_voted2008,
+                  interest_whovote2008=data2012$interest_whovote2008,
+                  discrim_self=data2012$discrim_self,
+                  profile_raceeth=data2012$profile_raceeth,
+                  profile_birthyear=data2012$profile_birthyear,
+                  profile_educdegree=data2012$profile_educdegree,
+                  profile_hhincome=data2012$profile_hhincome,
+                  postvote_regpty=data2012$postvote_regpty)
+
+votingrecord=data.frame(vote2012=subdat$presvote, vote2008=subdat$interest_whovote2008)
+votingrecord$vote2008=as.character(votingrecord$vote2008)
+votingrecord$vote2012=as.character(votingrecord$vote2012)
+votingrecord$vote2008[votingrecord$vote2008=="1. Barack obama"]="dem"
+votingrecord$vote2008[votingrecord$vote2008=="2. John mccain"]="rep"
+votingrecord$vote2008[!(votingrecord$vote2008%in%c("dem", "rep"))]=NA
+votingrecord=na.omit(votingrecord)
+
+subdat2=subdat
+subdat2$interest_whovote2008=as.character(subdat2$interest_whovote2008)
+subdat2$interest_whovote2008[subdat2$interest_whovote2008=="2. John mccain"]="rep"
+subdat2$interest_whovote2008[subdat2$interest_whovote2008=="1. Barack obama"]="dem"
+subdat2$interest_whovote2008[!(subdat2$interest_whovote2008 %in% c("dem", "rep"))]=NA
+subdat2$gender_respondent_x=as.character(subdat2$gender_respondent_x)
+subdat2$gender_respondent_x[subdat2$gender_respondent_x=="2. Female"]="Female"
+subdat2$gender_respondent_x[subdat2$gender_respondent_x=="1. Male"]="Male"
+subdat2$interest_attention=as.character(subdat2$interest_attention)
+subdat2$interest_attention[subdat2$interest_attention=="-9. Refused"]=NA
+subdat2$interest_attention[subdat2$interest_attention=="-8. Don't know"]=NA
+subdat2$interest_attention=as.numeric(as.factor(subdat2$interest_attention))
+subdat2$interest_wherevote=as.character(subdat2$interest_wherevote)
+subdat2$interest_wherevote[subdat2$interest_wherevote=="1. Yes"]="yes"
+subdat2$interest_wherevote[subdat2$interest_wherevote=="2. No"]="no"
+subdat2$interest_wherevote[!(subdat2$interest_wherevote %in% c("yes", "no"))]=NA
+subdat2$discrim_self=as.character(subdat2$discrim_self)
+subdat2$discrim_self[subdat2$discrim_self=="-9. Refused"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-8. Don't know"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-7. Deleted due to partial (post-election) interview"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-6. Not asked, unit nonresponse (no post-election interview)"]=NA
+subdat2$discrim_self=as.numeric(as.factor(subdat2$discrim_self))
+subdat2$profile_birthyear[subdat2$profile_birthyear==-1]=NA
+subdat2$profile_birthyearchar=as.character(subdat2$profile_birthyear)
+subdat2$profile_educdegree[subdat2$profile_educdegree=="-1. Inapplicable"]=NA
+subdat2$profile_educdegree=as.numeric(subdat2$profile_educdegree)-1
+subdat2$profile_hhincome[subdat2$profile_hhincome=="-1. Inapplicable"]=NA
+subdat2$profile_hhincome=as.numeric(subdat2$profile_hhincome)-1
+
+nonflipvoters=subdat2[,c(1,2,3,4,6,7,9,10,11,13)]
+nonflipvoters=nonflipvoters[nonflipvoters$interest_whovote2008==nonflipvoters$presvote,]
+nonflipvoters=nonflipvoters[!is.na(nonflipvoters$presvote),]
+nonflipvoters=nonflipvoters[!is.na(nonflipvoters$interest_whovote2008),]
+
+flipvoters=subdat2[,c(1,2,3,4,6,7,9,10,11,13)]
+flipvoters=flipvoters[flipvoters$interest_whovote2008!=flipvoters$presvote,]
+flipvoters=flipvoters[!is.na(flipvoters$presvote),]
+flipvoters=flipvoters[!is.na(flipvoters$interest_whovote2008),]
+
+subdat2=subdat2[,c(1,2,3,4,6,7,9,10,11,13)]
+subdat2$flip=rep(NA, nrow(subdat2))
+subdat2$flip[subdat2$interest_whovote2008!=subdat2$presvote]=1
+subdat2$flip[subdat2$interest_whovote2008==subdat2$presvote]=0
+
+subdat2=subdat2[!is.na(subdat2$flip),]
+
+```
+
+
+```{r, echo=F}
+library(ggplot2)
+ggplot()+
+  geom_bar(data=votingrecord, aes(x=vote2012, fill=vote2008), position = "dodge")+
+  scale_fill_manual(values=c("blue", "red"), labels=c("Democrat", "Republican"))+
+  labs(fill="Party 2008")+
+  xlab("Party 2012")+
+  ylab("Number of Voters")+
+  scale_x_discrete(labels=c("Democrat", "Republican"))+
+  ggtitle("Voters stick to their parties in presidential elections")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),plot.title = element_text(hjust = 0.5))
+
+```
+
+Note that out of 3,344 respondents who voted in both elections, 3,082 voted for candidates in the same parties while only 262 flipped parties.  Republicans showed a higher flip rate - 173 out of 1,373 republican voters (12.6%) switched parties between 2008 and 2012, while only 89 out of 1,971 (4.5%) of democratic voters switched.
+
+Such a stark trend implies two things.  First, since very few voters cross party lines, the characteristics of swing voters may be of great interest to indicate which voters campaigns should target and how to potentially create more swing voters.  Second, under the assumption that voters will not switch parties, the key factor that determines elections is how many voters of each type vote, and therefore increasing turnout of desired voters is a deciding factor in elections.
+
+# Which voters actually vote?
+
+Considering the second point first, hypothetically, the candidate who wins is the candidate who has the highest number of voters who would in theory vote for them actually show up and cast their ballots.  Since it is impossible to quantify the number of voters who would theoretically vote for a candidate, consider instead voter turnout based on demographic characteristics.
+
+As is typcially reported, in the 2008 election, higher income individuals were more likely to vote.
+
+```{r, echo=F}
+subdat2=subdat
+subdat2$interest_whovote2008=as.character(subdat2$interest_whovote2008)
+subdat2$interest_whovote2008[subdat2$interest_whovote2008=="2. John mccain"]="rep"
+subdat2$interest_whovote2008[subdat2$interest_whovote2008=="1. Barack obama"]="dem"
+subdat2$interest_whovote2008[!(subdat2$interest_whovote2008 %in% c("dem", "rep"))]=NA
+subdat2$gender_respondent_x=as.character(subdat2$gender_respondent_x)
+subdat2$gender_respondent_x[subdat2$gender_respondent_x=="2. Female"]="Female"
+subdat2$gender_respondent_x[subdat2$gender_respondent_x=="1. Male"]="Male"
+subdat2$interest_attention=as.character(subdat2$interest_attention)
+subdat2$interest_attention[subdat2$interest_attention=="-9. Refused"]=NA
+subdat2$interest_attention[subdat2$interest_attention=="-8. Don't know"]=NA
+subdat2$interest_attention=as.numeric(as.factor(subdat2$interest_attention))
+subdat2$interest_wherevote=as.character(subdat2$interest_wherevote)
+subdat2$interest_wherevote[subdat2$interest_wherevote=="1. Yes"]="yes"
+subdat2$interest_wherevote[subdat2$interest_wherevote=="2. No"]="no"
+subdat2$interest_wherevote[!(subdat2$interest_wherevote %in% c("yes", "no"))]=NA
+subdat2$discrim_self=as.character(subdat2$discrim_self)
+subdat2$discrim_self[subdat2$discrim_self=="-9. Refused"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-8. Don't know"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-7. Deleted due to partial (post-election) interview"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-6. Not asked, unit nonresponse (no post-election interview)"]=NA
+subdat2$discrim_self=as.numeric(as.factor(subdat2$discrim_self))
+subdat2$profile_birthyear[subdat2$profile_birthyear==-1]=NA
+subdat2$profile_birthyearchar=as.character(subdat2$profile_birthyear)
+subdat2$profile_educdegree[subdat2$profile_educdegree=="-1. Inapplicable"]=NA
+subdat2$profile_educdegree=as.numeric(subdat2$profile_educdegree)-1
+subdat2$profile_hhincome[subdat2$profile_hhincome=="-1. Inapplicable"]=NA
+subdat2$profile_hhincome=as.numeric(subdat2$profile_hhincome)-1
+subdat2$interest_voted2008=as.character(subdat2$interest_voted2008)
+subdat2$interest_voted2008[subdat2$interest_voted2008=="-9. Refused"]=NA
+subdat2$interest_voted2008[subdat2$interest_voted2008=="-8. Don't know"]=NA
+subdat2$interest_voted2008[subdat2$interest_voted2008=="1. Yes, voted"]="yes"
+subdat2$interest_voted2008[subdat2$interest_voted2008=="2. No, didn't vote"]="no"
+
+subdat2$income=subdat$profile_hhincome
+subdat2$income[subdat2$income=="-1. Inapplicable"]=NA
+
+
+dat=data.frame(prop.table(table(subdat2$interest_voted2008, droplevels(subdat2$income)), margin=2)[2,])
+colnames(dat)="propVote2008"
+dat$income=rownames(dat)
+dat$income=unlist(lapply(dat$income, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$income=as.factor(dat$income)
+dat$income=ordered(dat$income, levels=dat$income)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=income, y=propVote2008), stat="identity", fill="darkred")+
+  ggtitle("Higher income people are more likely to vote")+
+  xlab("Household Income")+
+  ylab("Proportion Who Voted")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+Likewise, older people were also more likely to vote.
+
+```{r, echo=F}
+dat=data.frame(propvote=prop.table(table(subdat2$interest_voted2008, subdat2$profile_birthyear), margin=2)[2,])
+dat$year=rownames(dat)
+dat=dat[-c(73,72,71,70),]
+ggplot()+
+  geom_bar(data=dat, aes(x=year, y=propvote), stat="identity", fill="darkblue")+
+  ggtitle("Older people are more likely to vote")+
+  xlab("Birth Year")+
+  ylab("Proportion Who Voted")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+And finally, more educated people are more likely to vote.
+
+```{r, echo=F}
+subdat2$education=subdat$profile_educdegree
+subdat2$education[subdat2$income=="-1. Inapplicable"]=NA
+dat=data.frame(prop.table(table(subdat2$interest_voted2008, droplevels(subdat2$education)), margin=2)[2,])
+colnames(dat)="propVote2008"
+dat$educ=rownames(dat)
+dat$educ=unlist(lapply(dat$educ, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$educ[dat$educ=="High school graduate - high school diploma or the equivalent (ged)"]="High School"
+dat$educ=as.factor(dat$educ)
+dat$educ=ordered(dat$educ, levels=dat$educ)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=educ, y=propVote2008), stat="identity", fill="gray")+
+  ggtitle("More educated people are more likely to vote")+
+  xlab("Education Level")+
+  ylab("Proportion Who Voted")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+Also of important note is that income and education level are known to be related - individuals with more education tend to be higher earners.
+
+```{r, echo=F, message=F}
+dat=subdat2
+dat$income=droplevels(dat$income)
+levels(dat$income)=unlist(lapply(levels(dat$income), function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$education=droplevels(dat$education)
+levels(dat$education)=unlist(lapply(levels(dat$education), function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+levels(dat$education)[10]="High School"
+
+ggplot(data=dat[!is.na(dat$education)&!is.na(dat$income),])+
+  geom_point(aes(x=education,y=income))+
+  xlab("Education Level")+
+  ylab("Household Income")+
+  ggtitle("Education and Income are Strongly Correlated")+
+  geom_smooth(aes(x=as.numeric(education),y=as.numeric(income)),method="loess")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+
+Considering these three factors (age, education level, and income) as key factors of voter turnout, consider voting tendencies of voters among these categories.
+
+Interesteringly, the observed trends are opposite what we would expect if voter turnout had determined the 2008 election.  Higher income individuals were more likely to vote republican.
+
+```{r, echo=F}
+dat=data.frame(prop.table(table(subdat2$interest_whovote2008, droplevels(subdat2$income)), margin=2)[1,])
+colnames(dat)="propVote2008"
+dat$income=rownames(dat)
+dat$income=unlist(lapply(dat$income, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$income=as.factor(dat$income)
+dat$income=ordered(dat$income, levels=dat$income)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=income, y=propVote2008), stat="identity", fill="darkred")+
+  ggtitle("Higher income people tended to vote republican")+
+  xlab("Household Income")+
+  ylab("Proportion Who Voted Democrat")+
+  geom_hline(yintercept = 0.5, lty="dashed")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+Older people also tended to vote republican.
+
+```{r, echo=F}
+dat=data.frame(propvote=prop.table(table(subdat2$interest_whovote2008, subdat2$profile_birthyear), margin=2)[1,])
+dat$year=rownames(dat)
+dat=dat[-c(73,72,71,70),]
+ggplot()+
+  geom_bar(data=dat, aes(x=year, y=propvote), stat="identity", fill="darkblue")+
+  ggtitle("Older people tended to vote republican")+
+  xlab("Birth Year")+
+  ylab("Proportion Who Voted Democrat")+
+  geom_hline(yintercept = 0.5, lty="dashed")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+And finally, higher education people were also more likely to vote republican.
+
+```{r, echo=F}
+subdat2$education=subdat$profile_educdegree
+subdat2$education[subdat2$income=="-1. Inapplicable"]=NA
+dat=data.frame(prop.table(table(subdat2$interest_whovote2008, droplevels(subdat2$education)), margin=2)[1,])
+colnames(dat)="propVote2008"
+dat$educ=rownames(dat)
+dat$educ[dat$educ=="-1. Inapplicable"]=NA
+dat=dat[!is.na(dat$educ),]
+dat$educ=unlist(lapply(dat$educ, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$educ[dat$educ=="High school graduate - high school diploma or the equivalent (ged)"]="High School"
+dat$educ=as.factor(dat$educ)
+dat$educ=ordered(dat$educ, levels=dat$educ)
+dat$educ=droplevels(dat$educ)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=educ, y=propVote2008), stat="identity", fill="gray")+
+  ggtitle("More educated people tended to vote republican")+
+  xlab("Education Level")+
+  ylab("Proportion Who Voted Democrat")+
+  geom_hline(yintercept = 0.5, lty="dashed")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+How is it possible that the democratic candidate won the 2008 election when the voters with highest turnout tended to vote republican?  The answer is that although they tended to vote for the republican candidate more often than other demographic groups, the majority of them still voted democrat.  Particularly across income and education levels, nearly all groups had over 50% democrat voters, as indicated by bars surpassing the dashed line in the previous plots.
+
+The findings suggest that voter turnout did not, in fact, determine the 2008 election.  However, that finding may not hold for other elections and requires further investigation.
+
+
+# Which voters are swing voters?
+
+Apart from voter turnout, the remaining factor that may impact election outcome is swing voter loyalties - which voters will cross party lines and vote for an unexpected candidate?
+
+Unlike party affiliation, swing voter status is not related to income or age.  However, it appears that voters who face less discrimination are more likely to switch political parties.
+
+```{r, echo=F}
+subdat2=subdat
+subdat2$interest_whovote2008=as.character(subdat2$interest_whovote2008)
+subdat2$interest_whovote2008[subdat2$interest_whovote2008=="2. John mccain"]="rep"
+subdat2$interest_whovote2008[subdat2$interest_whovote2008=="1. Barack obama"]="dem"
+subdat2$interest_whovote2008[!(subdat2$interest_whovote2008 %in% c("dem", "rep"))]=NA
+subdat2$gender_respondent_x=as.character(subdat2$gender_respondent_x)
+subdat2$gender_respondent_x[subdat2$gender_respondent_x=="2. Female"]="Female"
+subdat2$gender_respondent_x[subdat2$gender_respondent_x=="1. Male"]="Male"
+subdat2$interest_attention=as.character(subdat2$interest_attention)
+subdat2$interest_attention[subdat2$interest_attention=="-9. Refused"]=NA
+subdat2$interest_attention[subdat2$interest_attention=="-8. Don't know"]=NA
+subdat2$interest_attention=as.numeric(as.factor(subdat2$interest_attention))
+subdat2$interest_wherevote=as.character(subdat2$interest_wherevote)
+subdat2$interest_wherevote[subdat2$interest_wherevote=="1. Yes"]="yes"
+subdat2$interest_wherevote[subdat2$interest_wherevote=="2. No"]="no"
+subdat2$interest_wherevote[!(subdat2$interest_wherevote %in% c("yes", "no"))]=NA
+subdat2$discrim_self=as.character(subdat2$discrim_self)
+subdat2$discrim_self[subdat2$discrim_self=="-9. Refused"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-8. Don't know"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-7. Deleted due to partial (post-election) interview"]=NA
+subdat2$discrim_self[subdat2$discrim_self=="-6. Not asked, unit nonresponse (no post-election interview)"]=NA
+subdat2$discrim_self=as.numeric(as.factor(subdat2$discrim_self))
+subdat2$profile_birthyear[subdat2$profile_birthyear==-1]=NA
+subdat2$profile_birthyearchar=as.character(subdat2$profile_birthyear)
+subdat2$profile_educdegree[subdat2$profile_educdegree=="-1. Inapplicable"]=NA
+subdat2$profile_educdegree=as.numeric(subdat2$profile_educdegree)-1
+subdat2$profile_hhincome[subdat2$profile_hhincome=="-1. Inapplicable"]=NA
+subdat2$profile_hhincome=as.numeric(subdat2$profile_hhincome)-1
+
+nonflipvoters=subdat2[,c(1,2,3,4,6,7,9,10,11,13)]
+nonflipvoters=nonflipvoters[nonflipvoters$interest_whovote2008==nonflipvoters$presvote,]
+nonflipvoters=nonflipvoters[!is.na(nonflipvoters$presvote),]
+nonflipvoters=nonflipvoters[!is.na(nonflipvoters$interest_whovote2008),]
+
+flipvoters=subdat2[,c(1,2,3,4,6,7,9,10,11,13)]
+flipvoters=flipvoters[flipvoters$interest_whovote2008!=flipvoters$presvote,]
+flipvoters=flipvoters[!is.na(flipvoters$presvote),]
+flipvoters=flipvoters[!is.na(flipvoters$interest_whovote2008),]
+
+subdat2=subdat2[,c(1,2,3,4,6,7,9,10,11,13)]
+subdat2$flip=rep(NA, nrow(subdat2))
+subdat2$flip[subdat2$interest_whovote2008!=subdat2$presvote]=1
+subdat2$flip[subdat2$interest_whovote2008==subdat2$presvote]=0
+```
+
+```{r,echo=F}
+dat=subdat2
+dat$discrim=subdat$discrim_self
+dat$discrim[dat$discrim=="-9. Refused"]=NA
+dat$discrim[dat$discrim=="-8. Don't know"]=NA
+dat$discrim[dat$discrim=="-7. Deleted due to partial (post-election) interview"]=NA
+dat$discrim[dat$discrim=="-6. Not asked, unit nonresponse (no post-election interview)"]=NA
+dat$discrim=droplevels(dat$discrim)
+dat=data.frame(prop.table(table(dat$flip, dat$discrim), margin=2)[2,])
+colnames(dat)="propVote2008"
+dat$discrim=rownames(dat)
+dat=dat[!is.na(dat$discrim),]
+dat$discrim=unlist(lapply(dat$discrim, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$discrim=as.factor(dat$discrim)
+dat$discrim=ordered(dat$discrim, levels=dat$discrim)
+dat$discrim=droplevels(dat$discrim)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=discrim, y=propVote2008), stat="identity", fill="gray")+
+  ggtitle("Voters who face less discrimination are\nmore likely to switch parties")+
+  xlab("Amount of Discrimination")+
+  ylab("Proportion of Voters\nWho Flipped Parties")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+
+```
+
+Individuals with very little education (less than high school) are unlikely to switch parties, but individuals at other education levels have similar probabilities of swapping parties.
+
+```{r, echo=F}
+subdat2$education=subdat$profile_educdegree
+subdat2$education[subdat2$income=="-1. Inapplicable"]=NA
+dat=data.frame(prop.table(table(subdat2$flip, droplevels(subdat2$education)), margin=2)[2,])
+colnames(dat)="propVote2008"
+dat$educ=rownames(dat)
+dat$educ[dat$educ=="-1. Inapplicable"]=NA
+dat=dat[!is.na(dat$educ),]
+dat$educ=unlist(lapply(dat$educ, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$educ[dat$educ=="High school graduate - high school diploma or the equivalent (ged)"]="High School"
+dat$educ=as.factor(dat$educ)
+dat$educ=ordered(dat$educ, levels=dat$educ)
+dat$educ=droplevels(dat$educ)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=educ, y=propVote2008), stat="identity", fill="gray")+
+  ggtitle("Voters with less education are\nmore unlikely to switch parties")+
+  xlab("Education Level")+
+  ylab("Proportion of Voters\nWho Flipped Parties")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+Finally, and perhaps most discouraging for political campaigners, voters who pay the most attention to politics are actually less likely to switch parties, and in fact those who claim to never pay attention to politics are the most likely to swing vote.
+
+```{r, echo=F}
+subdat2$interest=subdat$interest_attention
+subdat2$interest[subdat2$interest=="-9. Refused"]=NA
+subdat2$interest[subdat2$interest=="-8. Don't know"]=NA
+dat=data.frame(prop.table(table(subdat2$flip, droplevels(subdat2$interest)), margin=2)[2,])
+colnames(dat)="propVote2008"
+dat$educ=rownames(dat)
+dat=dat[!is.na(dat$educ),]
+dat$educ=unlist(lapply(dat$educ, function(x){paste(strsplit(x, split=" ")[[1]][-1], collapse=" ")}))
+dat$educ=as.factor(dat$educ)
+dat$educ=ordered(dat$educ, levels=dat$educ)
+dat$educ=droplevels(dat$educ)
+
+ggplot()+
+  geom_bar(data=dat, aes(x=educ, y=propVote2008), stat="identity", fill="gray")+
+  ggtitle("Voters who pay attention to politics are\nmore unlikely to switch parties")+
+  xlab("How Much Attention to Politics?")+
+  ylab("Proportion of Voters\nWho Flipped Parties")+
+  theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+```
+
+Altogether, these findings suggest that swing voters change affiliation for trivial reasons.  Although they tend to be relatively well educated majority group members, they claim to not pay attention to politics and change their votes for apparently trivial reasons.  These findings may explain why political campaigns tend to focus on flashy ads rather than detailed political issues - they are appealing to fickle swing voters.
+
+# So what does this all mean?
+
+These findings suggest that to win an election, a candidate must make sure their voters vote (and/or prevent competitors' voters from voting) and win over swing voters who do not care about politics.  These findings are consistent with observed trends in political campaigning that focus on getting voters to the polls and emphasize politicians' characters rather than their policies.
+
+
+
+
+
