@@ -14,7 +14,7 @@ Consider the 2008 presidential election between Barack Obama (democrat) and John
 ```{r, echo=F}
 library(foreign)
 
-data2012=read.dta("data/anes_timeseries_2012_dta/anes_timeseries_2012_Stata12.dta")
+data2012=read.dta("../data/anes_timeseries_2012_Stata12.dta")
 
 realvals=as.character(data2012$postvote_presvtwho)
 realvals[realvals=="1. [preload: dem_pcname]"]="dem"
